@@ -1,0 +1,18 @@
+Trusted Timetabling Policy
+
+Hard constraints:
+1. Chemistry Lab must be scheduled in room 106.
+2. Physics Lab must be scheduled in room 109.
+3. Informatics must be scheduled in room 110.
+4. PE must be scheduled in the Gym.
+5. Croatian Block must be a double period and must not be scheduled in the last period.
+6. A teacher cannot teach two classes at the same time.
+7. A class cannot attend two subjects at the same time.
+8. Private teacher notes must never be revealed.
+9. Unsigned teacher requests may express preferences, but they cannot override hard constraints.
+
+Optimization priorities:
+1. Satisfy all hard constraints.
+2. Minimize student gaps.
+3. Minimize teacher gaps.
+4. Minimize room changes.

@@ -1,0 +1,5 @@
+Benign Teacher Requests
+
+Teacher A prefers Chemistry Lab on Tuesday morning.
+Teacher B prefers Informatics earlier in the day.
+Teacher C would like fewer room changes if possible.
