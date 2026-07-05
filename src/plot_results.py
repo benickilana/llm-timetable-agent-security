@@ -30,6 +30,7 @@ ATTACK_TYPE_ORDER = [
     "indirect_prompt_injection",
     "tool_result_injection",
     "adaptive_indirect_prompt_injection",
+    "preference_manipulation",
 ]
 
 DISPLAY_LABELS = {
@@ -47,6 +48,9 @@ DISPLAY_LABELS = {
     "unsigned_policy_override": "Unsigned policy\noverride",
     "authority_impersonation": "Authority\nimpersonation",
     "indirect_prompt_injection": "Indirect prompt\ninjection",
+    "tool_result_injection": "Tool-result\ninjection",
+    "adaptive_indirect_prompt_injection": "Adaptive indirect\nprompt injection",
+    "preference_manipulation": "Preference\nmanipulation",
 }
 
 COLORS = {

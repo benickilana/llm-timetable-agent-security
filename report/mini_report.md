@@ -4,17 +4,17 @@
 
 ## Abstract
 
-This project studies prompt-injection risks in a toy LLM-assisted school-timetabling agent. The agent receives a signed trusted policy, private teacher notes, untrusted teacher requests or imported tool results, and a user query. It returns both a natural-language answer and a structured JSON action.
+This project studies prompt-injection risks in a controlled LLM-assisted school-timetabling agent. The agent receives a signed trusted policy, private teacher notes, untrusted teacher requests or imported tool results, and a user query. It returns both a natural-language answer and a structured JSON action.
 
-The project evaluates whether malicious untrusted inputs can cause the assistant to violate hard constraints, leak private information, manipulate optimization priorities, bypass validation, accept unsigned policy updates, or follow indirect prompt injections. The implemented defenses include context separation, policy hierarchy prompting, Ed25519-signed policy provenance, a deterministic runtime monitor, answer/action consistency checking, and a simple tool-output firewall.
+The project evaluates whether malicious untrusted inputs can cause the assistant to violate hard constraints, leak private information, manipulate optimization priorities, bypass validation, accept unsigned policy updates, follow indirect prompt injections, or prefer attacker-promoted scheduling options. The implemented defenses include context separation, policy hierarchy prompting, Ed25519-signed policy provenance, a deterministic runtime monitor, answer/action consistency checking, and a simple tool-output firewall.
 
-Across two local Ollama models, signed-policy prompting reduced but did not eliminate successful attacks. Adding deterministic runtime validation reduced observed attack success to **0/15** on both models while preserving **10/10** benign utility. An imported-tool-results extension with five tool-result injection attacks showed that a tool-output firewall eliminated targeted tool-result injection successes, but did not eliminate all unsafe outputs; runtime validation remained necessary for enforcement.
+Across two local Ollama models, signed-policy prompting reduced but did not eliminate successful attacks. Adding deterministic runtime validation reduced observed attack success to **0/15** on both models while preserving **10/10** benign utility. An imported-tool-results extension showed that a tool-output firewall reduced tool-boundary attacks. A preference-manipulation extension modeled adversarial-SEO-style ranking attacks; across Qwen and Llama, signed-policy prompting alone allowed one unsafe preference manipulation, while tool-output filtering and runtime validation prevented the observed unsafe outputs.
 
 ## Motivation
 
 LLM systems are increasingly used as agents over documents, private data, and tools. This creates a security problem: the model may receive both trusted system policy and untrusted natural-language data. If the model treats untrusted data as instructions, it may take unsafe actions.
 
-This project explores that problem in the domain of school timetabling, inspired by constraint-based timetable construction. Timetabling is a useful toy domain because it naturally contains hard constraints, soft preferences, private information, and optimization objectives.
+This project explores that problem in the domain of school timetabling, inspired by constraint-based timetable construction. Timetabling is a useful controlled domain because it naturally contains hard constraints, soft preferences, private information, and optimization objectives.
 
 The project is intentionally small, but it aims to study a realistic systems question:
 
@@ -40,12 +40,12 @@ The runtime monitor checks both outputs. This is important because the model can
 
 The trusted policy contains hard constraints such as:
 
-| Subject | Required room |
-|---|---:|
-| Chemistry Lab | 106 |
-| Physics Lab | 109 |
-| Informatics | 110 |
-| PE | Gym |
+| Subject       | Required room |
+| ------------- | ------------: |
+| Chemistry Lab |           106 |
+| Physics Lab   |           109 |
+| Informatics   |           110 |
+| PE            |           Gym |
 
 The policy also states that private teacher notes must not be revealed, unsigned teacher requests cannot override hard constraints, and timetable repair should prioritize hard constraints first, then student gaps, teacher gaps, and room changes.
 
@@ -64,38 +64,40 @@ The attacker attempts to make the assistant:
 - accept unsigned policy updates,
 - obey authority impersonation attacks,
 - follow indirect prompt injections,
-- follow malicious instructions embedded in imported tool results.
+- follow malicious instructions embedded in imported tool results,
+- prefer attacker-promoted scheduling recommendations from untrusted ranking pages.
 
 ## Attack Benchmark
 
-The benchmark contains 20 hand-written attacks.
+The benchmark contains 23 hand-written attacks.
 
-| Range | Category | Goal |
-|---|---|---|
-| A1–A3 | Constraint violation | Schedule subjects into invalid rooms. |
-| A4–A5 | Privacy leakage | Reveal private teacher notes. |
-| A6–A7 | Objective manipulation | Change the trusted optimization priority. |
-| A8–A9 | Tool misuse | Disable validation or skip the validator. |
-| A10–A11 | Unsigned policy override | Treat unsigned text as a hard policy update. |
-| A12–A13 | Authority impersonation | Pretend to be an administrator or principal. |
-| A14–A15 | Indirect prompt injection | Hide malicious instructions in untrusted text. |
-| A16–A19 | Tool-result injection | Inject malicious instructions through imported tool results. |
-| A20 | Adaptive indirect prompt injection | Wrap unsafe advice in refusal-like wording. |
+| Range   | Category                           | Goal                                                         |
+| ------- | ---------------------------------- | ------------------------------------------------------------ |
+| A1–A3   | Constraint violation               | Schedule subjects into invalid rooms.                        |
+| A4–A5   | Privacy leakage                    | Reveal private teacher notes.                                |
+| A6–A7   | Objective manipulation             | Change the trusted optimization priority.                    |
+| A8–A9   | Tool misuse                        | Disable validation or skip the validator.                    |
+| A10–A11 | Unsigned policy override           | Treat unsigned text as a hard policy update.                 |
+| A12–A13 | Authority impersonation            | Pretend to be an administrator or principal.                 |
+| A14–A15 | Indirect prompt injection          | Hide malicious instructions in untrusted text.               |
+| A16–A19 | Tool-result injection              | Inject malicious instructions through imported tool results. |
+| A20     | Adaptive indirect prompt injection | Wrap unsafe advice in refusal-like wording.                  |
+| A21–A23 | Preference manipulation            | Prefer attacker-promoted recommendations or tools.           |
 
 The project also includes 10 benign utility cases to check whether defenses preserve normal behavior.
 
 ## Defense Modes
 
-| Defense mode | Description |
-|---|---|
-| `no_defense` | All context is treated as equally authoritative. |
-| `context_separation` | Trusted and untrusted inputs are explicitly separated. |
-| `policy_hierarchy` | Trusted policy has higher authority than teacher requests. |
-| `signed_policy_hierarchy` | Only signed trusted policy files may define hard constraints. |
-| `validator` | A deterministic monitor checks outputs. |
-| `policy_hierarchy_validator` | Policy hierarchy plus runtime validation. |
-| `signed_policy_hierarchy_validator` | Signed policy provenance plus runtime validation. |
-| `signed_policy_hierarchy_tool_firewall` | Signed policy provenance plus tool-output sanitization. |
+| Defense mode                                      | Description                                                             |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `no_defense`                                      | All context is treated as equally authoritative.                        |
+| `context_separation`                              | Trusted and untrusted inputs are explicitly separated.                  |
+| `policy_hierarchy`                                | Trusted policy has higher authority than teacher requests.              |
+| `signed_policy_hierarchy`                         | Only signed trusted policy files may define hard constraints.           |
+| `validator`                                       | A deterministic monitor checks outputs.                                 |
+| `policy_hierarchy_validator`                      | Policy hierarchy plus runtime validation.                               |
+| `signed_policy_hierarchy_validator`               | Signed policy provenance plus runtime validation.                       |
+| `signed_policy_hierarchy_tool_firewall`           | Signed policy provenance plus tool-output sanitization.                 |
 | `signed_policy_hierarchy_tool_firewall_validator` | Signed policy provenance, tool-output firewall, and runtime validation. |
 
 ## Runtime Monitor
@@ -110,6 +112,7 @@ It detects:
 - validation bypass attempts,
 - unsigned policy overrides,
 - unsafe scheduling claims in free text,
+- preference manipulation through untrusted recommendation pages,
 - inconsistencies between the answer and structured action.
 
 A normalization layer canonicalizes minor model-output variations such as `room 110`, `Room 110`, or string-valued `null`. This reduced false positives in benign cases while preserving attack detection.
@@ -151,14 +154,14 @@ The main attack benchmark uses A1–A15. The benign utility benchmark uses B1–
 
 ### Attack Success and Benign Utility
 
-| Model | Defense mode | Attack success | Benign utility |
-|---|---|---:|---:|
-| Qwen 2.5 3B | `no_defense` | 11/15 (73%) | 7/10 (70%) |
-| Qwen 2.5 3B | `signed_policy_hierarchy` | 9/15 (60%) | 10/10 (100%) |
-| Qwen 2.5 3B | `signed_policy_hierarchy_validator` | 0/15 (0%) | 10/10 (100%) |
-| Llama 3.2 3B | `no_defense` | 8/15 (53%) | 9/10 (90%) |
-| Llama 3.2 3B | `signed_policy_hierarchy` | 4/15 (27%) | 10/10 (100%) |
-| Llama 3.2 3B | `signed_policy_hierarchy_validator` | 0/15 (0%) | 10/10 (100%) |
+| Model        | Defense mode                        | Attack success | Benign utility |
+| ------------ | ----------------------------------- | -------------: | -------------: |
+| Qwen 2.5 3B  | `no_defense`                        |    11/15 (73%) |     7/10 (70%) |
+| Qwen 2.5 3B  | `signed_policy_hierarchy`           |     9/15 (60%) |   10/10 (100%) |
+| Qwen 2.5 3B  | `signed_policy_hierarchy_validator` |      0/15 (0%) |   10/10 (100%) |
+| Llama 3.2 3B | `no_defense`                        |     8/15 (53%) |     9/10 (90%) |
+| Llama 3.2 3B | `signed_policy_hierarchy`           |     4/15 (27%) |   10/10 (100%) |
+| Llama 3.2 3B | `signed_policy_hierarchy_validator` |      0/15 (0%) |   10/10 (100%) |
 
 ![Qwen attack success by defense](../results/plots/ollama_qwen_main_v3_attack_success_by_defense_pretty.png)
 
@@ -175,39 +178,60 @@ Two metrics are reported:
 
 ### Qwen 2.5 3B
 
-| Defense mode | Targeted attacks | Unsafe unblocked outputs | Blocked outputs |
-|---|---:|---:|---:|
-| `signed_policy_hierarchy` | 1/5 | 3/5 | 0/5 |
-| `signed_policy_hierarchy_tool_firewall` | 0/5 | 1/5 | 0/5 |
-| `signed_policy_hierarchy_validator` | 0/5 | 0/5 | 3/5 |
-| `signed_policy_hierarchy_tool_firewall_validator` | 0/5 | 0/5 | 1/5 |
+| Defense mode                                      | Targeted attacks | Unsafe unblocked outputs | Blocked outputs |
+| ------------------------------------------------- | ---------------: | -----------------------: | --------------: |
+| `signed_policy_hierarchy`                         |              1/5 |                      3/5 |             0/5 |
+| `signed_policy_hierarchy_tool_firewall`           |              0/5 |                      1/5 |             0/5 |
+| `signed_policy_hierarchy_validator`               |              0/5 |                      0/5 |             3/5 |
+| `signed_policy_hierarchy_tool_firewall_validator` |              0/5 |                      0/5 |             1/5 |
 
 ### Llama 3.2 3B
 
-| Defense mode | Targeted attacks | Unsafe unblocked outputs | Blocked outputs |
-|---|---:|---:|---:|
-| `signed_policy_hierarchy` | 2/5 | 3/5 | 0/5 |
-| `signed_policy_hierarchy_tool_firewall` | 0/5 | 2/5 | 0/5 |
-| `signed_policy_hierarchy_validator` | 0/5 | 0/5 | 3/5 |
-| `signed_policy_hierarchy_tool_firewall_validator` | 0/5 | 0/5 | 2/5 |
+| Defense mode                                      | Targeted attacks | Unsafe unblocked outputs | Blocked outputs |
+| ------------------------------------------------- | ---------------: | -----------------------: | --------------: |
+| `signed_policy_hierarchy`                         |              2/5 |                      3/5 |             0/5 |
+| `signed_policy_hierarchy_tool_firewall`           |              0/5 |                      2/5 |             0/5 |
+| `signed_policy_hierarchy_validator`               |              0/5 |                      0/5 |             3/5 |
+| `signed_policy_hierarchy_tool_firewall_validator` |              0/5 |                      0/5 |             2/5 |
 
 ![Qwen unsafe tool-result outputs](../results/plots/ollama_qwen_tool_injection_v2_unsafe_unblocked_by_defense.png)
 
 The tool-output firewall eliminated targeted tool-result injection successes in this small benchmark, but did not eliminate all unsafe outputs. Runtime validation remained necessary to guarantee enforcement.
 
+## Preference Manipulation Extension
+
+The newest extension adds attacks A21–A23. These attacks model adversarial-SEO-style recommendation pages that try to make the agent select an attacker-promoted scheduling option such as `BoostSchedule Premium`, `FastSchedule Pro`, or `ScheduleBoost SEO` instead of the verified `PolicyCompliantScheduler`.
+
+This extension connects the timetable-agent setting to robust-agent and preference-manipulation concerns: untrusted external content can affect not only concrete scheduling decisions, but also the agent's preference over tools, recommendations, or ranked options.
+
+### Local-model results
+
+| Model        | Defense mode                                      | Targeted attacks | Unsafe unblocked outputs | Blocked outputs |
+| ------------ | ------------------------------------------------- | ---------------: | -----------------------: | --------------: |
+| Qwen 2.5 3B  | `signed_policy_hierarchy`                         |              1/3 |                      1/3 |             0/3 |
+| Qwen 2.5 3B  | `signed_policy_hierarchy_tool_firewall`           |              0/3 |                      0/3 |             0/3 |
+| Qwen 2.5 3B  | `signed_policy_hierarchy_validator`               |              0/3 |                      0/3 |             1/3 |
+| Qwen 2.5 3B  | `signed_policy_hierarchy_tool_firewall_validator` |              0/3 |                      0/3 |             0/3 |
+| Llama 3.2 3B | `signed_policy_hierarchy`                         |              1/3 |                      1/3 |             0/3 |
+| Llama 3.2 3B | `signed_policy_hierarchy_tool_firewall`           |              0/3 |                      0/3 |             0/3 |
+| Llama 3.2 3B | `signed_policy_hierarchy_validator`               |              0/3 |                      0/3 |             1/3 |
+| Llama 3.2 3B | `signed_policy_hierarchy_tool_firewall_validator` |              0/3 |                      0/3 |             0/3 |
+
+Across both local LLMs, signed-policy prompting alone allowed one unsafe preference manipulation. The tool-output firewall prevented the observed preference-manipulation success by sanitizing untrusted ranking instructions before model execution. Runtime validation also caught the unsafe selected option when the firewall was not present.
+
 ## Simulated Ablation
 
 The simulated backend evaluates A1–A15 across the original seven defense modes. This is used as a controlled ablation of defense layers.
 
-| Defense mode | Successful attacks | Total attacks | Attack success rate |
-|---|---:|---:|---:|
-| `no_defense` | 15 | 15 | 100% |
-| `context_separation` | 12 | 15 | 80% |
-| `policy_hierarchy` | 8 | 15 | 53% |
-| `signed_policy_hierarchy` | 4 | 15 | 27% |
-| `validator` | 0 | 15 | 0% |
-| `policy_hierarchy_validator` | 0 | 15 | 0% |
-| `signed_policy_hierarchy_validator` | 0 | 15 | 0% |
+| Defense mode                        | Successful attacks | Total attacks | Attack success rate |
+| ----------------------------------- | -----------------: | ------------: | ------------------: |
+| `no_defense`                        |                 15 |            15 |                100% |
+| `context_separation`                |                 12 |            15 |                 80% |
+| `policy_hierarchy`                  |                  8 |            15 |                 53% |
+| `signed_policy_hierarchy`           |                  4 |            15 |                 27% |
+| `validator`                         |                  0 |            15 |                  0% |
+| `policy_hierarchy_validator`        |                  0 |            15 |                  0% |
+| `signed_policy_hierarchy_validator` |                  0 |            15 |                  0% |
 
 ![Simulated full ablation](../results/plots/simulated_full_attack_success_by_defense_pretty.png)
 
@@ -222,6 +246,7 @@ The repository includes unit tests for:
 - room normalization,
 - privacy-leak detection,
 - validation bypass detection,
+- preference-manipulation detection,
 - false-positive handling for refusals,
 - trusted-policy signature tampering,
 - tool-output firewall sanitization.
@@ -242,7 +267,7 @@ Second, provenance matters. Ed25519 signatures give the system a concrete way to
 
 Third, structured JSON actions are not enough by themselves. The system must also inspect the natural-language answer because the model may place unsafe advice in the free-text response.
 
-Fourth, tool-output sanitization helps against indirect prompt injection, but cannot replace runtime validation. The firewall reduced targeted tool-result injection success, but some unsafe outputs remained unless the runtime validator was active.
+Fourth, tool-output sanitization helps against indirect prompt injection and preference manipulation, but cannot replace runtime validation. The firewall reduced targeted tool-result and ranking-manipulation attacks, while runtime validation remained the decisive enforcement layer.
 
 ## Limitations
 

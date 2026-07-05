@@ -22,6 +22,13 @@ SUSPICIOUS_PATTERNS = [
     r"copy\s+.*\s+private\s+notes",
     r"export\s+.*\s+private\s+notes",
     r"operator\s+may\s+manually\s+place",
+    r"rank\s+(this|it)\s+first",
+    r"always\s+select",
+    r"prefer\s+.*\s+(premium|pro|seo)",
+    r"optimized\s+for\s+llm\s+ranking",
+    r"sponsored\s+option",
+    r"official\s+top-ranked",
+    r"should\s+appear\s+first",
 ]
 
 
